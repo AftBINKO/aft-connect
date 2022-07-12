@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Date, Boolean
+from sqlalchemy import Column, String, Integer, Date, Boolean, Text
 
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy_serializer import SerializerMixin
@@ -14,20 +14,24 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
     surname = Column(String, nullable=False)
     name = Column(String, nullable=False)
     patronymic = Column(String)
-    date_of_birth = Column(Date, nullable=False)
+    date_of_birth = Column(String, nullable=False)
     sex = Column(Boolean, nullable=False)
 
     email = Column(String, unique=True, nullable=False)
     login = Column(String, unique=True, nullable=False)
     hashed_password = Column(String, nullable=False)
 
+    data = Column(Text, default="{}")
     active = Column(Boolean, nullable=False, default=True)
 
     def __repr__(self):
-        return f"<User {self.login}>"
+        return f"<User {self.surname} {self.name}>"
 
     def set_password(self, password):
         self.hashed_password = generate_password_hash(password)
 
     def check_password(self, password):
         return check_password_hash(self.hashed_password, password)
+
+    def get_columns(self):
+        return [column.key for column in self.__table__.columns]

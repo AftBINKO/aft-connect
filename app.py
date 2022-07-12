@@ -66,7 +66,7 @@ def register():
             user.name = form.name.data
             user.surname = form.surname.data
             user.patronymic = form.patronymic.data
-            user.date_of_birth = form.date_of_birth.data
+            user.date_of_birth = str(form.date_of_birth.data)
             user.sex = form.sex.data != "Мужской"
 
             user.login = form.login.data
