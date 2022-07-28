@@ -34,7 +34,13 @@
                         <div class="alert alert-danger" role="alert">{{ error }}</div>
                     {% endfor %}
                 </div>
-                <div>{{ form.submit(type="submit", class="btn btn-success") }}</div>
+                <div>
+                    <p>Нет учётной записи? <a href="{{ url_for("register") }}">
+                        Зарегистрироваться
+                    </a>
+                    </p>
+                    {{ form.submit(type="submit", class="btn btn-success") }}
+                </div>
             </form>
         </div>
     </div>

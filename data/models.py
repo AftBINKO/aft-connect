@@ -20,6 +20,7 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
     email = Column(String, unique=True, nullable=False)
     login = Column(String, unique=True, nullable=False)
     hashed_password = Column(String, nullable=False)
+    one_time_password = Column(String)
 
     data = Column(Text, default="{}")
     active = Column(Boolean, nullable=False, default=True)
