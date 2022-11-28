@@ -7,18 +7,8 @@
 {% block content %}
     <div class="content" style="margin-top: 400px; margin-bottom: 400px">
         <h1 style="text-align: center">На сервере возникла ошибка</h1>
-        {% if current_user.is_authenticated %}
-            <p style="text-align: center">
-                Вернитесь на предыдущую страницу, либо <a href="{{ url_for("profile") }}">
-                перейдите на страничку вашего профиля
-            </a>
-            </p>
-        {% else %}
-            <p style="text-align: center">
-                Вернитесь на предыдущую страницу, либо <a href="{{ url_for("login") }}">
-                авторизуйтесь
-            </a>
-            </p>
-        {% endif %}
+        <p style="text-align: center">
+            Сообщите об ошибке <a href="https://vk.com/c_aft">нам в ВК</a>
+        </p>
     </div>
 {% endblock %}

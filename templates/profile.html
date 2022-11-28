@@ -17,17 +17,43 @@
             {% endif %}
         </h2>
         <p class="fs-3">{{ current_user.login }}</p>
-        <p>{{ format_date }}</p>
+        <p>{{ age }}</p>
         <p><a href="{{ url_for("edit_profile") }}">Изменить персональную информацию</a></p>
+    </div>
+    <div class="container" style="margin-top: 50px; margin-bottom: 50px">
+        <form action="" method="post">
+            <legend style="text-align: left">Одноразовые пароли</legend>
+            <div class="form-text">
+                Одноразовые пароли — ещё один способ входа в AFT Connect. После использования такого
+                пароля, он автоматически удаляется. Вы можете сгенерировать новый одноразовый пароль
+                тут.
+            </div>
+            <div class="mb-3">
+                {% if current_user.one_time_password %}
+                    <label class="form-label">Ваш одноразовый пароль</label>
+                    <input class="form-control" type="text"
+                           value="{{ current_user.one_time_password }}"
+                           aria-label="Одноразовый пароль" disabled readonly>
+                {% endif %}
+                <div style="margin-top: 10px">
+                    <a href="{{ url_for("generate_one_time_password") }}" class="btn btn-success">
+                        Сгенерировать новый одноразовый пароль
+                    </a>
+                </div>
+            </div>
+        </form>
     </div>
     <div class="container" style="margin-top: 25px">
         <p>
             <a href="{{ url_for("change_email") }}" class="btn btn-success">Изменить почту</a>
             <a href="{{ url_for("change_password") }}" class="btn btn-warning">Изменить пароль</a>
+            <a href="{{ url_for("logout") }}" class="btn btn-danger">Выйти</a>
         </p>
     </div>
     <div class="container" style="margin-top: 500px">
-        <p>Вы также можете <a href="">деактивировать аккаунт</a></p>
+        <p>
+            Вы также можете <a href="{{ url_for("deactivate_account") }}">деактивировать аккаунт</a>
+        </p>
     </div>
 
 {% endblock %}

@@ -1,15 +1,17 @@
 from flask import Flask, render_template, redirect, flash, url_for, request
 from flask_login import current_user, LoginManager, login_required, logout_user, login_user
-from datetime import datetime
+from datetime import date, datetime
+from dateutil.relativedelta import relativedelta
 from string import ascii_letters, digits, punctuation
-from pymorphy2 import MorphAnalyzer
+from pytils import numeral
 
 from config import *
 from data.db_session import *
 from data.forms import RegisterForm, LoginForm, EditPersonalInfoForm, ChangeEmailForm, \
-    ChangePasswordForm
+    ChangePasswordForm, DeactivateForm, LoginOneTimePasswordForm
 from data.models import User
 from data.bootstrap_types import *
+from data.one_time_password import check_otp
 
 app = Flask(__name__)
 app.config.from_object('config')
@@ -105,7 +107,6 @@ def register():
 
 
 @app.route('/login', methods=['GET', 'POST'])
-@app.route('/login/', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("profile"))
@@ -141,6 +142,29 @@ def login():
     return render_template('login.html', **data)
 
 
+@app.route('/login/one_time_password', methods=['GET', 'POST'])
+def login_one_time_password():
+    if current_user.is_authenticated:
+        return redirect(url_for("profile"))
+
+    # db_sess = create_session()
+
+    form = LoginOneTimePasswordForm()
+    data = {
+        'form': form
+    }
+
+    if form.validate_on_submit():
+        user, message = check_otp(form.one_time_password.data)
+        data.update(message)
+
+        if user:
+            login_user(user, remember=form.remember_me.data)
+            return redirect(url_for("profile"))
+
+    return render_template('login_one_time_password.html', **data)
+
+
 @app.route('/')
 def index():
     if current_user.is_authenticated:
@@ -148,17 +172,15 @@ def index():
     return redirect(url_for("login"))
 
 
-@app.route('/my')
+@app.route('/my', methods=['GET', 'POST'])
 @login_required
 def profile():
     date_of_birth = datetime.strptime(current_user.date_of_birth, '%Y-%m-%d').date()
-    day = date_of_birth.day
-    month = MorphAnalyzer().parse(RUSSIAN_MONTHS[date_of_birth.month].lower())[0].inflect(
-        {'gent'}).word
-    year = f"{date_of_birth.year} года"
+    age = relativedelta(date.today(), date_of_birth).years
+    naming = numeral.get_plural(age, "год, года, лет")
 
     data = {
-        'format_date': f'{day} {month} {year}'
+        'age': naming,
     }
 
     return render_template('profile.html', **data)
@@ -271,6 +293,47 @@ def change_password():
     return render_template('change_password.html', **data)
 
 
+@app.route('/my/deactivate', methods=['GET', 'POST'])
+@login_required
+def deactivate_account():
+    db_sess = create_session()
+
+    form = DeactivateForm()
+    # noinspection PyUnresolvedReferences
+    user = db_sess.query(User).filter(User.id == current_user.id).first()
+    text = f'Я ПРОЧИТАЛ{"А" if user.sex else ""} СООБЩЕНИЕ ВЫШЕ И ПОНИМАЮ ВСЕ РИСКИ'
+    data = {
+        'form': form,
+        'verification_text': text,
+        'type_message': None,
+        'message': None
+    }
+    if form.validate_on_submit():
+        if form.text.data != text:
+            data['type_message'] = DANGER
+            data['message'] = "Неправильно набран текст."
+        else:
+            user.active = False
+            user.delete_one_time_password()
+            db_sess.commit()
+
+            logout()
+
+    return render_template('deactivation.html', **data)
+
+
+@app.route('/my/generate_one_time_password', methods=['GET', 'POST'])
+@login_required
+def generate_one_time_password():
+    db_sess = create_session()
+    # noinspection PyUnresolvedReferences
+    user = db_sess.query(User).filter(User.id == current_user.id).first()
+    user.generate_one_time_password()
+    db_sess.commit()
+
+    return redirect(url_for('profile'))
+
+
 @app.errorhandler(401)
 def unauthorized(error):
     return redirect(url_for('login'))
@@ -279,6 +342,11 @@ def unauthorized(error):
 @app.errorhandler(404)
 def not_found(error):
     return render_template('404.html')
+
+
+@app.errorhandler(500)
+def not_found(error):
+    return render_template('500.html')
 
 
 if __name__ == '__main__':

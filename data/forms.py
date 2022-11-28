@@ -45,3 +45,14 @@ class ChangePasswordForm(FlaskForm):
     new_password = PasswordField('Новый пароль', validators=[DataRequired()])
     new_password_again = PasswordField('Повторите новый пароль', validators=[DataRequired()])
     submit = SubmitField('Подтвердить')
+
+
+class DeactivateForm(FlaskForm):
+    text = StringField('Введите проверочный текст', validators=[DataRequired()])
+    delete = SubmitField('Удалить')
+
+
+class LoginOneTimePasswordForm(FlaskForm):
+    one_time_password = PasswordField('Одноразовый пароль', validators=[DataRequired()])
+    remember_me = BooleanField('Запомнить меня')
+    submit = SubmitField('Войти')
