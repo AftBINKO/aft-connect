@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Date, Boolean, Text
+from sqlalchemy import Column, String, Integer, Boolean, Text
 
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy_serializer import SerializerMixin

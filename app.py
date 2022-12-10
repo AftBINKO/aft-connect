@@ -3,9 +3,12 @@ from flask_login import current_user, LoginManager, login_required, logout_user,
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 from string import ascii_letters, digits, punctuation
+
+from flask_restful import Api
 from pytils import numeral
 
 from config import *
+from data.auth_resources import *
 from data.db_session import *
 from data.forms import RegisterForm, LoginForm, EditPersonalInfoForm, ChangeEmailForm, \
     ChangePasswordForm, DeactivateForm, LoginOneTimePasswordForm
@@ -15,6 +18,7 @@ from data.one_time_password import check_otp
 
 app = Flask(__name__)
 app.config.from_object('config')
+api = Api(app)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -345,9 +349,10 @@ def not_found(error):
 
 
 @app.errorhandler(500)
-def not_found(error):
+def crash(error):
     return render_template('500.html')
 
 
 if __name__ == '__main__':
+    api.add_resource(UserResource, "/api/get_user_data")
     app.run(debug=DEBUG)
