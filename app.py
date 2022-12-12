@@ -12,7 +12,7 @@ from data.auth_resources import *
 from data.db_session import *
 from data.forms import RegisterForm, LoginForm, EditPersonalInfoForm, ChangeEmailForm, \
     ChangePasswordForm, DeactivateForm, LoginOneTimePasswordForm
-from data.models import User
+from data.models import *
 from data.bootstrap_types import *
 from data.one_time_password import check_otp
 
@@ -129,7 +129,10 @@ def login():
         user = db_sess.query(User).filter(User.login == form.login.data.lower()).first()
 
         if user:
-            if user.active:
+
+            user_status = db_sess.query(Status).filter(Status.id == user.status).first().title
+
+            if user_status != "deactive":
                 if user.check_password(form.password.data):
                     login_user(user, remember=form.remember_me.data)
                     return redirect(url_for("profile"))
@@ -151,7 +154,7 @@ def login_one_time_password():
     if current_user.is_authenticated:
         return redirect(url_for("profile"))
 
-    # db_sess = create_session()
+    db_sess = create_session()
 
     form = LoginOneTimePasswordForm()
     data = {
@@ -159,10 +162,11 @@ def login_one_time_password():
     }
 
     if form.validate_on_submit():
-        user, message = check_otp(form.one_time_password.data)
+        user_id, message = check_otp(form.one_time_password.data)
         data.update(message)
 
-        if user:
+        if user_id is not None:
+            user = db_sess.query(User).filter(User.id == user_id).first()
             login_user(user, remember=form.remember_me.data)
             return redirect(url_for("profile"))
 
@@ -183,8 +187,12 @@ def profile():
     age = relativedelta(date.today(), date_of_birth).years
     naming = numeral.get_plural(age, "год, года, лет")
 
+    db_sess = create_session()
+    user_status = db_sess.query(Status).filter(Status.id == current_user.status).first().title
+
     data = {
         'age': naming,
+        'status': user_status
     }
 
     return render_template('profile.html', **data)
@@ -317,7 +325,7 @@ def deactivate_account():
             data['type_message'] = DANGER
             data['message'] = "Неправильно набран текст."
         else:
-            user.active = False
+            user.status = db_sess.query(Status).filter(Status.title == "deactive").first().id
             user.delete_one_time_password()
             db_sess.commit()
 

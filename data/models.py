@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Boolean, Text
+from sqlalchemy import Column, String, Integer, Boolean, Text, ForeignKey, orm
 
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy_serializer import SerializerMixin
@@ -10,6 +10,8 @@ from .db_session import SqlAlchemyBase
 
 class User(SqlAlchemyBase, UserMixin, SerializerMixin):
     __tablename__ = 'users'
+
+    serialize_rules = ("-user_status",)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
@@ -25,7 +27,9 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
     one_time_password = Column(String, unique=True)
 
     data = Column(Text, default="{}")
-    active = Column(Boolean, nullable=False, default=True)
+    status = Column(Integer, ForeignKey("statuses.id"), default=2)
+
+    user_status = orm.relation('Status')
 
     def __repr__(self):
         return f"<User {self.surname} {self.name}>"
@@ -46,6 +50,20 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
 
     def delete_one_time_password(self):
         self.one_time_password = None
+
+    def get_columns(self):
+        return [column.key for column in self.__table__.columns]
+
+
+class Status(SqlAlchemyBase, SerializerMixin):
+    __tablename__ = 'statuses'
+
+    serialize_rules = ("-user",)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String, nullable=False)
+
+    user = orm.relation("User", back_populates="user_status")
 
     def get_columns(self):
         return [column.key for column in self.__table__.columns]

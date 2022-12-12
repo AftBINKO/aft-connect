@@ -1,10 +1,10 @@
 from .bootstrap_types import *
 from .db_session import create_session
-from .models import User
+from .models import User, Status
 
 
 def check_otp(one_time_password):
-    """Проверяет одноразовый пароль, и возвращает сообщение с пользователем"""
+    """Проверяет одноразовый пароль, и возвращает сообщение с id пользователя"""
     db_sess = create_session()
 
     data = {
@@ -16,13 +16,16 @@ def check_otp(one_time_password):
     user = db_sess.query(User).filter(User.one_time_password == one_time_password).first()
 
     if user:
+        user_status = db_sess.query(Status).filter(Status.id == user.status).first().title
+
         user.delete_one_time_password()
         db_sess.commit()
-        if user.active:
-            return user, data
-        else:
-            data['type_message'] = WARNING
-            data['message'] = 'Ваш аккаунт был деактивирован.'
+
+        if user_status != "deactive":
+            return user.id, data
+
+        data['type_message'] = WARNING
+        data['message'] = 'Ваш аккаунт был деактивирован.'
     else:
         data['type_message'] = DANGER
         data['message'] = 'Неверный пароль.'
