@@ -18,7 +18,9 @@ def global_init(db_file, echo=False):
         raise FileNotFoundError("You must specify the database file")
 
     conn_str = f'sqlite:///{db_file.strip()}?check_same_thread=False'
-    print(f"Connecting to the database at {conn_str}")
+
+    if echo:
+        print(f"Connecting to the database at {conn_str}")
 
     engine = sa.create_engine(conn_str, echo=echo)
     __factory = orm.sessionmaker(bind=engine)

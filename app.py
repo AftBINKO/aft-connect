@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, flash, url_for, request
+from flask import Flask, render_template, redirect, flash, url_for, request, abort
 from flask_login import current_user, LoginManager, login_required, logout_user, login_user
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
@@ -23,7 +23,7 @@ api = Api(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-global_init("db/users.sqlite3", True)
+global_init("db/users.sqlite3", DEBUG)
 RUSSIAN_ALPHABET = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя"
 RUSSIAN_MONTHS = {
     1: "Январь",
@@ -44,7 +44,14 @@ RUSSIAN_MONTHS = {
 @login_manager.user_loader
 def load_user(user_id):
     db_sess = create_session()
-    return db_sess.query(User).get(user_id)
+    user = db_sess.query(User).get(user_id)
+
+    if user:
+        user_status = db_sess.query(Status).filter(Status.id == user.status).first()
+        if user_status.access_login:
+            return user
+
+    return
 
 
 @app.route('/logout')
@@ -129,10 +136,9 @@ def login():
         user = db_sess.query(User).filter(User.login == form.login.data.lower()).first()
 
         if user:
+            user_status = db_sess.query(Status).filter(Status.id == user.status).first()
 
-            user_status = db_sess.query(Status).filter(Status.id == user.status).first().title
-
-            if user_status != "deactive":
+            if user_status.access_login:
                 if user.check_password(form.password.data):
                     login_user(user, remember=form.remember_me.data)
                     return redirect(url_for("profile"))
@@ -140,8 +146,12 @@ def login():
                 data['type_message'] = DANGER
                 data['message'] = 'Неверный пароль.'
             else:
-                data['type_message'] = WARNING
-                data['message'] = 'Ваш аккаунт был деактивирован.'
+                if user_status.title == "deactive":
+                    data['type_message'] = WARNING
+                    data['message'] = 'Ваш аккаунт был деактивирован.'
+                else:
+                    data['type_message'] = DANGER
+                    data['message'] = 'Не удалось выполнить вход.'
         else:
             data['type_message'] = DANGER
             data['message'] = 'Неверный логин.'
@@ -188,7 +198,7 @@ def profile():
     naming = numeral.get_plural(age, "год, года, лет")
 
     db_sess = create_session()
-    user_status = db_sess.query(Status).filter(Status.id == current_user.status).first().title
+    user_status = db_sess.query(Status).filter(Status.id == current_user.status).first()
 
     data = {
         'age': naming,
@@ -196,6 +206,61 @@ def profile():
     }
 
     return render_template('profile.html', **data)
+
+
+@app.route('/admin_panel', methods=['GET', 'POST'])
+@login_required
+def admin_panel():
+    db_sess = create_session()
+    user_status = db_sess.query(Status).filter(Status.id == current_user.status).first()
+
+    if user_status.access_admin_panel:
+        data = {
+            "users": db_sess.query(User).filter(User.id != current_user.id),
+            "statuses": db_sess.query(Status).all()
+        }
+
+        if request.method == "POST":
+            d = dict(request.form)
+            print(d)
+            for header in d.keys():
+                match header:
+
+                    case "del_otp_user_id":
+                        user = db_sess.query(User).filter(
+                            User.id == int(d["del_otp_user_id"])
+                        ).first()
+                        user.delete_one_time_password()
+
+                    case "activate":
+                        user = db_sess.query(User).filter(User.id == int(d["activate"])).first()
+                        status = db_sess.query(Status).filter(Status.title == "default").first()
+                        user.status = status.id
+
+                    case "deactivate":
+                        user = db_sess.query(User).filter(User.id == int(d["deactivate"])).first()
+                        status = db_sess.query(Status).filter(Status.title == "deactive").first()
+                        user.status = status.id
+
+                    case "give_permissions":
+                        user = db_sess.query(User).filter(
+                            User.id == int(d["give_permissions"])
+                        ).first()
+                        status = db_sess.query(Status).filter(Status.title == "moderator").first()
+                        user.status = status.id
+
+                    case "remove_permissions":
+                        user = db_sess.query(User).filter(
+                            User.id == int(d["remove_permissions"])
+                        ).first()
+                        status = db_sess.query(Status).filter(Status.title == "default").first()
+                        user.status = status.id
+
+            db_sess.commit()
+
+        return render_template('admin_panel.html', **data)
+
+    abort(403)
 
 
 @app.route('/my/edit_profile', methods=['GET', 'POST'])
@@ -349,6 +414,11 @@ def generate_one_time_password():
 @app.errorhandler(401)
 def unauthorized(error):
     return redirect(url_for('login'))
+
+
+@app.errorhandler(403)
+def forbidden(error):
+    return render_template('403.html')
 
 
 @app.errorhandler(404)

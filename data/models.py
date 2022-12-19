@@ -62,8 +62,15 @@ class Status(SqlAlchemyBase, SerializerMixin):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String, nullable=False)
+    color = Column(String)
+
+    access_admin_panel = Column(Boolean, nullable=False, default=False)
+    access_login = Column(Boolean, nullable=False, default=True)
 
     user = orm.relation("User", back_populates="user_status")
+
+    def __repr__(self):
+        return f"<Status {self.title}>"
 
     def get_columns(self):
         return [column.key for column in self.__table__.columns]

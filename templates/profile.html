@@ -11,9 +11,19 @@
     <div class="container" style="margin-top: 25px">
         <h2 style="text-align: left">
             {% if current_user.patronymic %}
-                {{ current_user.name }} {{ current_user.patronymic }} {{ current_user.surname }}
+                {% if status.color %}
+                    {{ current_user.name }} {{ current_user.patronymic }} {{ current_user.surname }}
+                    <span class="badge bg-{{ status.color }}">{{ status.title }}</span>
+                {% else %}
+                    {{ current_user.name }} {{ current_user.patronymic }} {{ current_user.surname }}
+                {% endif %}
             {% else %}
-                {{ current_user.name }} {{ current_user.surname }}
+                {% if status.color %}
+                    {{ current_user.name }} {{ current_user.surname }}
+                    <span class="badge bg-{{ status.color }}">{{ status.title }}</span>
+                {% else %}
+                    {{ current_user.name }} {{ current_user.surname }}
+                {% endif %}
             {% endif %}
         </h2>
         <p class="fs-3">{{ current_user.login }}</p>
@@ -31,20 +41,35 @@
             <div class="mb-3">
                 {% if current_user.one_time_password %}
                     <label class="form-label">Ваш одноразовый пароль</label>
-                    <input class="form-control" type="text"
-                           value="{{ current_user.one_time_password }}"
-                           aria-label="Одноразовый пароль" disabled readonly>
+                    <div class="input-group">
+                        <input class="form-control" type="text"
+                               value="{{ current_user.one_time_password }}"
+                               aria-label="Одноразовый пароль" disabled readonly>
+                        <span class="input-group-btn">
+                            <a href="{{ url_for("generate_one_time_password") }}"
+                               class="btn btn-success">
+                                Сгенерировать новый одноразовый пароль
+                            </a>
+                        </span>
+                    </div>
+
+                {% else %}
+                    <div style="margin-top: 10px">
+                        <a href="{{ url_for("generate_one_time_password") }}"
+                           class="btn btn-success">
+                            Сгенерировать новый одноразовый пароль
+                        </a>
+                    </div>
                 {% endif %}
-                <div style="margin-top: 10px">
-                    <a href="{{ url_for("generate_one_time_password") }}" class="btn btn-success">
-                        Сгенерировать новый одноразовый пароль
-                    </a>
-                </div>
             </div>
         </form>
     </div>
     <div class="container" style="margin-top: 25px">
         <p>
+            {% if status.access_admin_panel %}
+                <a href="{{ url_for("admin_panel") }}" class="btn btn-primary">Панель
+                    администратора</a>
+            {% endif %}
             <a href="{{ url_for("change_email") }}" class="btn btn-success">Изменить почту</a>
             <a href="{{ url_for("change_password") }}" class="btn btn-warning">Изменить пароль</a>
             <a href="{{ url_for("logout") }}" class="btn btn-danger">Выйти</a>

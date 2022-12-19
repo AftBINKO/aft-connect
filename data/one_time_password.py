@@ -16,16 +16,20 @@ def check_otp(one_time_password):
     user = db_sess.query(User).filter(User.one_time_password == one_time_password).first()
 
     if user:
-        user_status = db_sess.query(Status).filter(Status.id == user.status).first().title
+        user_status = db_sess.query(Status).filter(Status.id == user.status).first()
 
         user.delete_one_time_password()
         db_sess.commit()
 
-        if user_status != "deactive":
+        if user_status.access_login:
             return user.id, data
 
-        data['type_message'] = WARNING
-        data['message'] = 'Ваш аккаунт был деактивирован.'
+        if user_status.title == "deactive":
+            data['type_message'] = WARNING
+            data['message'] = 'Ваш аккаунт был деактивирован.'
+        else:
+            data['type_message'] = DANGER
+            data['message'] = 'Не удалось выполнить вход.'
     else:
         data['type_message'] = DANGER
         data['message'] = 'Неверный пароль.'
