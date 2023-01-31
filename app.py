@@ -1,6 +1,7 @@
 from flask import Flask, render_template, redirect, flash, url_for, request, abort
 from flask_login import current_user, LoginManager, login_required, logout_user, login_user
 from datetime import date, datetime
+from json import loads, dumps
 from dateutil.relativedelta import relativedelta
 from string import ascii_letters, digits, punctuation
 
@@ -15,6 +16,7 @@ from data.forms import RegisterForm, LoginForm, EditPersonalInfoForm, ChangeEmai
 from data.models import *
 from data.bootstrap_types import *
 from data.one_time_password import check_otp
+from data.keys import generate_key
 
 app = Flask(__name__)
 app.config.from_object('config')
@@ -110,6 +112,15 @@ def register():
             user.login = form.login.data.lower()
             user.email = form.email.data
             user.set_password(form.password.data)
+
+            user_data = {
+                "auth_key":
+                    {
+                        "key": generate_key(),
+                        "is_active": True
+                    }
+            }
+            user.data = dumps(user_data)
 
             db_sess.add(user)
             db_sess.commit()
@@ -392,6 +403,11 @@ def deactivate_account():
         else:
             user.status = db_sess.query(Status).filter(Status.title == "deactive").first().id
             user.delete_one_time_password()
+
+            user_data = loads(user.data)
+            user_data["auth_key"]["is_active"] = False
+            user.data = dumps(user_data)
+
             db_sess.commit()
 
             logout()
